@@ -5,16 +5,15 @@
 #include "types.h"
 #include <util/delay.h>
 
-class SevenSegment 
-{
-  public:
+class SevenSegment{
+    public:
     static byte digits[4];
-
-	  static void enable();
+    static byte points;
+    static void enable();
     static void show();
-
-  //private:
     static byte encodeDigit(byte digit);
+
+    private:
     static void writeShift(byte data);
 };
 

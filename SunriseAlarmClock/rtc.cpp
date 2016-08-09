@@ -6,8 +6,8 @@ byte RTC::readRegister(byte regAddr)
 {
 	_delay_us(10);
 	
-	I2C::beginWrite(RTC_ADDR);
-	I2C::write(regAddr);
+	I2C::beginRead(RTC_ADDR);
+	I2C::write(regAddr, TWI_SLR_ACK);
 	I2C::end();
 	
 	_delay_us(10);
@@ -24,8 +24,8 @@ void RTC::writeRegister(byte regAddr, byte val)
 	_delay_us(10);
 	
 	I2C::beginWrite(RTC_ADDR);
-	I2C::write(regAddr);
-	I2C::write(val);
+	I2C::write(regAddr, TWI_SLW_ACK);
+	I2C::write(val, TWI_SLW_ACK);
 	I2C::end();
 }
 

@@ -7,16 +7,22 @@
 
 #define RTC_ADDR 0b1101000
 
-#define DISP_PORT PORTC
-#define DISP_DDR DDRC
-#define DISP_1 PC0
-#define DISP_2 PC1
-#define DISP_3 PC2
-#define DISP_4 PC3
+#define DISP_1_PORT PORTD
+#define DISP_2_PORT PORTD
+#define DISP_3_PORT PORTD
+#define DISP_4_PORT PORTB
+#define DISP_1_DDR DDRD
+#define DISP_2_DDR DDRD
+#define DISP_3_DDR DDRD
+#define DISP_4_DDR DDRB
+#define DISP_1 PD7
+#define DISP_2 PD6
+#define DISP_3 PD5
+#define DISP_4 PB7
 
 #define DISPX_PORT PORTD
 #define DISPX_DDR DDRD
-#define DISPX_PIN PD0
+#define DISPX_PIN PD4
 
 // For 75HC595
 #define DISP_CLK_DDR DDRB
