@@ -43,11 +43,8 @@ int main(void){
     SevenSegment::enable();
     I2C::enable();
 
-    I2C::beginWrite(RTC_ADDR);
-    I2C::write(0, TWI_STR_ACK);
-    I2C::handshake();
-
     I2C::beginRead(RTC_ADDR);
+    I2C::write(0, TWI_STR_ACK);
     byte result = I2C::read();
     I2C::end();
 
