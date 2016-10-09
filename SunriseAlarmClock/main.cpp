@@ -39,21 +39,75 @@ void blinkSlowForever() {
     for(;;) blinkSlow();
 }
 
+void error() {
+    ledOff();
+    ledOn();
+    ledOff();
+    ledOn();
+    ledOff();
+}
 int main(void){
-    SevenSegment::enable();
-    I2C::enable();
-
-    I2C::beginRead(RTC_ADDR);
-    I2C::write(0, TWI_STR_ACK);
-    byte result = I2C::read();
-    I2C::end();
-
-    SevenSegment::digits[3] = SevenSegment::encodeDigit(result%10);
-    SevenSegment::digits[2] = SevenSegment::encodeDigit((result/10)%10);
-    SevenSegment::digits[1] = SevenSegment::encodeDigit((result/100)%10);
-
-    for(;;) {
-        SevenSegment::show();
+    _delay_ms(1);
+    for(;;){
+        I2C::enable();
+        _delay_ms(1);
+        ledOn();
+        //start bit:
+        if (!I2C::start(false)) {
+            error();
+            goto end;
+        }
+        //setup for setting address register
+        
+        //setup for write
+        //set slave addr
+        if (!I2C::address(RTC_ADDR)) {
+            error();
+            goto end;
+        }
+        //write to slave:
+        if (!I2C::write(0)) {
+            error();
+            goto end;
+        }
+        
+        //setup for receive
+        //send repeated start
+        if(!I2C::start(true)) {
+            error();
+            goto end;
+        }
+        
+        //set slave addr
+        if (!I2C::address(RTC_ADDR, true)) {
+            error();
+            goto end;
+        }
+        
+        // start slave transmission
+        if (!I2C::read(true)) {
+            error();
+            goto end;
+        }
+        // start slave transmission
+        if (!I2C::read(true)) {
+            error();
+            goto end;
+        }
+        // start last slave transmission
+        if (!I2C::read(false)) {
+            error();
+            goto end;
+        }
+        
+        //stop the transfer:
+        I2C::stop();
+        
+        
+        _delay_us(100);
+        end:
+        _delay_us(50);
+        ledOff();
+        I2C::disable();
     }
-    blinkSlowForever();
 }
