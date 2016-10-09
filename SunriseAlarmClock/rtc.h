@@ -36,11 +36,13 @@ struct Time {
 class RTC {
   public:
     static byte readRegister(byte regAddr);
-    static void writeRegister(byte regAddr, byte val);
+    static bool readRegisters(byte startAddr, byte count, byte* buffer);
+    static bool writeRegister(byte regAddr, byte val);
+    static bool writeRegisters(byte startAddr, byte count, byte* vals);
     static byte bcdToByte(byte tens, byte units);
     static byte byteToBcd(byte n);
     static Time getTime();
-    static void setTime(Time t);
+    static bool setTime(Time t);
 };
 
 #endif /* RTC_H_ */

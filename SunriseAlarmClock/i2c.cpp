@@ -55,7 +55,7 @@ byte I2C::read(bool keep_alive) {
     const byte expected = keep_alive ? TWI_SLR_A_ACK : TWI_SLR_N_ACK;
     if ((TWSR & TWSR_STAT_MASK) == expected) {
         return TWDR;
-        } else {
+     } else {
         return 255;
     }
 }
