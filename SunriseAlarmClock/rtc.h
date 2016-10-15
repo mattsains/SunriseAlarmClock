@@ -27,7 +27,7 @@ struct Time {
   byte day;
   byte date;
   byte month;
-  byte year;
+  unsigned int year;
 
   bool isPM();
   byte hourAsAMPM();

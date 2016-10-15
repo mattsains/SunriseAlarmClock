@@ -3,6 +3,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 
 #include "sevensegment.h"
 #include "i2c.h"
@@ -60,10 +61,19 @@ void error() {
     ledOff();
 }
 
-// Pointer to the latest time fetched from the RTC
-Time* volatile time;
-// Swapping variables for setting time pointer.
-Time t1, t2;
+// Latest time fetched from the RTC
+Time time;
+
+// An array containing display pixels
+byte segments[5];
+
+// UI state machine
+ui_state current_state = TIME;
+
+
+// Used to set the time
+int y_offset;
+byte mo_offset, d_offset, h_offset, m_offset;
 
 int main(void){
     I2C::enable();
@@ -100,31 +110,80 @@ int main(void){
     TCCR0B = (1<<CS02); // No prescaling
     OCR0A = 210; // Just faster than it takes to update display
     
-    sei(); // Enable interrupts so we can get the time
-    
-    while (time == 0) ; // Wait for time sync before enabling display
-    
     TIMSK0 = (1<<OCIE0A); // Enable interrupt on timer 0A
     
+    sei();
     
-    for(;;);
-    ledOff();
+    
+    byte _segments[5];
+    
+    for(;;) {
+        Time t;
+        
+        ATOMIC_BLOCK(ATOMIC_FORCEON) {
+            t = time;
+        }
+        switch(current_state) {
+            case TIME:
+            _segments[0] = (t.hour/10==0)?0:SevenSegment::encodeDigit(t.hour/10);
+            _segments[1] = SevenSegment::encodeDigit(t.hour%10);
+            _segments[2] = SevenSegment::encodeDigit(t.minute/10);
+            _segments[3] = SevenSegment::encodeDigit(t.minute%10);
+            if (t.second % 2 == 0) {
+                _segments[4] = 1<<2 | 1<<3;
+            }
+            else {
+                _segments[4] = 0;
+            }
+            break;
+            
+            case SET_Y:
+            t.year = (t.year + y_offset)%10000;
+            _segments[0] = SevenSegment::encodeDigit(t.year/1000);
+            _segments[1] = SevenSegment::encodeDigit((t.year%1000)/100);
+            _segments[2] = SevenSegment::encodeDigit((t.year%100)/10);
+            _segments[3] = SevenSegment::encodeDigit(t.year%10);
+            _segments[4] = 1<<2;
+            break;
+            
+            case SET_MO:
+            t.month = (t.month + mo_offset)%12;
+            _segments[0] = (t.month/10==0)?0:SevenSegment::encodeDigit(t.month/10);
+            _segments[1] = SevenSegment::encodeDigit(t.month%10);
+            _segments[2] = SevenSegment::encodeDigit(t.date/10);
+            _segments[3] = SevenSegment::encodeDigit(t.date%10);
+            _segments[4] = 1<<2;
+            break;
+            
+            case SET_D:
+             t.month = (t.month + mo_offset)%12;
+             t.date = (t.date + d_offset)%31;
+             _segments[0] = (t.month/10==0)?0:SevenSegment::encodeDigit(t.month/10);
+             _segments[1] = SevenSegment::encodeDigit(t.month%10);
+             _segments[2] = SevenSegment::encodeDigit(t.date/10);
+             _segments[3] = SevenSegment::encodeDigit(t.date%10);
+             _segments[4] = 1<<3;
+             break;
+             
+            default:
+            ;
+        }
+        ATOMIC_BLOCK(ATOMIC_FORCEON) {
+            for(byte i=0; i<5; i++) {
+                segments[i] = _segments[i];
+            }
+        }
+    }
 }
 
 // ISR for RTC 1Hz
 ISR(INT1_vect) {
-    Time t = RTC::getTime();
-    if (time == &t1) {
-        t2 = t;
-        time = &t2;
-    }
-    else {
-        t1 = t;
-        time = &t1;
-    }
+    time = RTC::getTime();
 }
 
 bool previousButtonValues[3];
+#define HOLD_WAIT 10
+byte hold_countdown[3] ={HOLD_WAIT,HOLD_WAIT,HOLD_WAIT};
 
 // ISR for buttons
 ISR(TIMER2_COMPA_vect) {
@@ -133,10 +192,45 @@ ISR(TIMER2_COMPA_vect) {
     for(byte i=0; i<3; i++) {
         values[i] = !(BTN_PIN&(1<<(BTN_0_PIN+i)));
         pressed[i] = values[i] && !previousButtonValues[i];
+        if (!values[i]) {
+            hold_countdown[i] = HOLD_WAIT;
+            } else if(hold_countdown[i]>0) {
+            hold_countdown[i]--;
+        }
     }
     
-    if (pressed[0]) {
-        PORTB ^= (1<<PB0);
+    switch(current_state) {
+        case TIME:
+        if (pressed[0]) {
+            current_state = SET_Y;
+        }
+        break;
+        case SET_Y:
+        if (pressed[0]) {
+            current_state = TIME;
+        }
+        else if (pressed[1]) {
+            y_offset++;
+        }
+        else if (hold_countdown[1]==0) {
+            y_offset+=10;
+            hold_countdown[1]=HOLD_WAIT;
+        }
+        else if (pressed[2]) {
+            current_state = SET_MO;
+        }
+        break;
+        case SET_MO:
+        if (pressed[0]) {
+            current_state = TIME;
+        }
+        else if (pressed[1]) {
+            mo_offset++;
+        }
+        else if (pressed[2]) {
+            current_state = SET_D;
+        }
+        default:;
     }
     
     for(byte i=0; i<3; i++)
@@ -145,17 +239,10 @@ ISR(TIMER2_COMPA_vect) {
 
 // ISR for display refresh timer
 ISR(TIMER0_COMPA_vect) {
-    Time t = *time;
-    SevenSegment::digits[0] = SevenSegment::encodeDigit(t.hour/10);
-    SevenSegment::digits[1] = SevenSegment::encodeDigit(t.hour%10);
-    SevenSegment::digits[2] = SevenSegment::encodeDigit(t.minute/10);
-    SevenSegment::digits[3] = SevenSegment::encodeDigit(t.minute%10);
-    if (t.second % 2 == 0) {
-        SevenSegment::points = 1<<2 | 1<<3;
+    for(byte i=0; i<4; i++) {
+        SevenSegment::digits[i] = segments[i];
     }
-    else {
-        SevenSegment::points = 0;
-    }
+    SevenSegment::points = segments[4];
     
     SevenSegment::show();
 }
