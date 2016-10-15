@@ -44,7 +44,6 @@ void SevenSegment::show() {
         DISP_OE_PORT &= ~(1<<DISP_OE_PIN);
         _delay_us(500);
         DISP_OE_PORT |= (1<<DISP_OE_PIN);
-        _delay_us(4);
         *(COLUMN_PORTS[i]) &= ~COLUMN_PINS[i];
     }
 
@@ -54,7 +53,6 @@ void SevenSegment::show() {
     DISP_OE_PORT &= ~(1<<DISP_OE_PIN);
     _delay_us(500);
     DISP_OE_PORT |= (1<<DISP_OE_PIN);
-    _delay_us(4);
     DISPX_PORT &= ~(1<<DISPX_PIN);
 }
 

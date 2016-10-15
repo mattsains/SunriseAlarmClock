@@ -41,4 +41,8 @@
 #define DISP_DATA_PORT PORTB
 #define DISP_DATA_PIN PB4
 
+#define BTN_DDR DDRD
+#define BTN_PIN PIND
+#define BTN_0_PIN 0
+
 #endif /* CONFIG_H_ */
