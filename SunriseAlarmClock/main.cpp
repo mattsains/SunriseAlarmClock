@@ -8,19 +8,7 @@
 #include "sevensegment.h"
 #include "i2c.h"
 #include "RTC.h"
-
-enum ui_state {
-    TIME,
-    SET_Y,
-    SET_MO,
-    SET_D,
-    SET_H,
-    SET_M,
-    SAVE_TIME_PROMPT,
-    SET_ALRM_H,
-    SET_ALRM_M,
-    SET_ALRM_ON
-};
+#include "lights.h"
 
 void ledOn() {
     DDRB |= (1<<PB0);
@@ -69,15 +57,6 @@ bool timeNeedsUpdate = true;
 
 // An array containing display pixels
 byte segments[5];
-
-// UI state machine
-ui_state current_state = TIME;
-
-
-// Used to set the time
-int y_offset;
-byte mo_offset, d_offset, h_offset, m_offset;
-
 int main(void){
     I2C::enable();
     SevenSegment::enable();
@@ -88,19 +67,7 @@ int main(void){
     EICRA = 0b1100; // enable interrupt on rising edge of 1Hz signal
     EIMSK = 0b10;
     
-    // Set up PWM timers for LEDs
-    TCCR1A = (1<<COM1A1) // Turn on normal PWM output
-    |(1<<COM1B1)
-    |(1<<WGM11); // Fast PWM with TOP=ICR1
-    
-    TCCR1B = (1<<WGM12)
-    |(1<<WGM13)
-    |(1<<CS10); // No prescaling
-    
-    ICR1H = 255; //Set top to max
-    ICR1L = 255;
-    
-    DDRB |= (1<<PB1)| (1<<PB2);
+    Lights::enable();
     
     // Set up timer for buttons
     TCCR2A = (1<<WGM21); // CTC mode
@@ -120,8 +87,14 @@ int main(void){
     byte _segments[5];
     ledOff();
     
+    
+    unsigned int x = 0;
     for(;;) {
         Time t;
+        
+       Lights::setCombined(x++);
+        
+        if (x >= 0x7fe) x=0;
         
         if (timeNeedsUpdate) {
             time = RTC::getTime();
@@ -132,8 +105,8 @@ int main(void){
         
         _segments[0] = (t.hour/10==0)?0:SevenSegment::encodeDigit(t.hour/10);
         _segments[1] = SevenSegment::encodeDigit(t.hour%10);
-        _segments[2] = SevenSegment::encodeDigit(t.second/10);
-        _segments[3] = SevenSegment::encodeDigit(t.second%10);
+        _segments[2] = SevenSegment::encodeDigit(t.minute/10);
+        _segments[3] = SevenSegment::encodeDigit(t.minute%10);
         if (t.second % 2 == 0) {
             _segments[4] = 1<<2 | 1<<3;
         }
@@ -150,18 +123,6 @@ int main(void){
 // ISR for RTC 1Hz
 ISR(INT1_vect) {
     timeNeedsUpdate = true;
-}
-
-bool previousButtonValues[3];
-#define HOLD_WAIT 10
-byte hold_countdown[3] ={0,0,0};
-
-void resetOffset() {
-    y_offset = 0;
-    mo_offset = 0;
-    d_offset = 0;
-    h_offset = 0;
-    m_offset = 0;
 }
 
 // ISR for buttons
