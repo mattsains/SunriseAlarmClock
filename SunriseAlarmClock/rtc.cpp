@@ -21,11 +21,12 @@ bool RTC::readRegisters(byte startAddr, byte count, byte* buffer) {
     if(!I2C::address(RTC_ADDR)) return false;
     if(!I2C::write(startAddr)) return false;
     
+    
     if(!I2C::start(true)) return false;
     if(!I2C::address(RTC_ADDR, true)) return false;
 
     for(byte i = 0; i < count; i++) {
-        buffer[i] = I2C::read(i < count);
+        buffer[i] = I2C::read((i + 1) < count);
     }
 
     I2C::stop();
@@ -91,12 +92,12 @@ Time RTC::getTime()
             if (hour == 12) {
                 hour = 0;
             }
-            } else {
+        } else {
             if (hour != 12) {
                 hour += 12;
             }
         }
-        } else {
+    } else {
         hour = RTC::bcdToByte(hourReg>>4, hourReg&0b1111);
     }
     
@@ -138,7 +139,7 @@ bool RTC::setTime(Time t)
     buffer[3] = t.day;
     buffer[4] = RTC::byteToBcd(t.date);
     buffer[5] = RTC::byteToBcd(t.month);
-    buffer[6] = RTC::byteToBcd(t.year);
+    buffer[6] = RTC::byteToBcd(t.year%100);
 
     return RTC::writeRegisters(0, 7, buffer);
 }
