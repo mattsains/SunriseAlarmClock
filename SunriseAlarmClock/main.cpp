@@ -9,6 +9,7 @@
 #include "i2c.h"
 #include "RTC.h"
 #include "lights.h"
+#include "buttons.h"
 
 void ledOn() {
     DDRB |= (1<<PB0);
@@ -91,7 +92,7 @@ int main(void){
     for(;;) {
         Time t;
         Lights::setCombined(x);
-        x+=100;
+        x+=10;
         
         
         if (timeNeedsUpdate) {
@@ -125,6 +126,11 @@ ISR(INT1_vect) {
 
 // ISR for buttons
 ISR(TIMER2_COMPA_vect) {
+    if (Buttons::readButtons() == NONE) {
+        ledOn();
+    } else {
+        ledOff();
+    }
 }
 
 // ISR for display refresh timer
