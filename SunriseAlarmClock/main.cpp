@@ -87,14 +87,12 @@ int main(void){
     byte _segments[5];
     ledOff();
     
-    
-    unsigned int x = 0;
+    unsigned long x = 4095;
     for(;;) {
         Time t;
+        Lights::setCombined(x);
+        x+=100;
         
-       Lights::setCombined(x++);
-        
-        if (x >= 0x7fe) x=0;
         
         if (timeNeedsUpdate) {
             time = RTC::getTime();

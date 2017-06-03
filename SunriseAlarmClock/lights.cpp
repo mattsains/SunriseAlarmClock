@@ -17,31 +17,19 @@ void Lights::enable() {
 }
 
 void Lights::setWhite(unsigned int intensity) {
-    intensity &= 0x3FF;
-    byte high = intensity >> 8;
-    byte low = intensity && 0xFF;
-    OCR1BH = high;
-    OCR1BL = low;
+    unsigned long x = pow(2.718281, intensity/5909.2) - 1;
+    OCR1BH = x >> 8;
+    OCR1BL = x & 0xFF;
 }
 
 void Lights::setRed(unsigned int intensity) {
-    intensity &= 0x3FF;
-    byte high = intensity >> 8;
-    byte low = intensity && 0xFF;
-    OCR1AH = high;
-    OCR1AL = low;
+    unsigned long x = pow(2.718281, intensity/5909.2) - 1;
+    OCR1AH = x >> 8;
+    OCR1AL = x & 0xFF;
 }
 
-void Lights::setCombined(unsigned int intensity) {
-    if (intensity < 0x3FF) {
-        DDRB |= (1<<PB0);
-        PORTB &= ~(1<<PB0);
-        setRed(intensity);
-        setWhite(0);
-    } else {
-        DDRB |= (1<<PB0);
-        PORTB |= (1<<PB0);
-        setRed(0x3f0);
-        setWhite(intensity - 0x3FF);
-    }
+void Lights::setCombined(unsigned long intensity) {
+   if (intensity >= 131070) intensity=131070;
+   setRed(intensity >= 0xffff ? 0xffff : intensity);
+   setWhite(intensity < 0xffff ? 0 : (intensity-0xffff));
 }
